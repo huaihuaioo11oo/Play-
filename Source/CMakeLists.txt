@@ -109,6 +109,15 @@ if(NOT (TARGET_PLATFORM_ANDROID OR TARGET_PLATFORM_IOS))
 	endif()
 endif()
 
+set(HLE_BGDA_SRC
+	hle/bgda/BgdaContext.h
+	hle/bgda/BgdaDebugBlock.cpp
+	hle/bgda/BgdaDebugBlock.h
+	hle/bgda/BgdaEeExecutor.cpp
+	hle/bgda/BgdaEeExecutor.h
+	hle/bgda/HleVMUtils.h
+)
+
 set(COMMON_SRC_FILES
 	AppConfig.cpp
 	AppConfig.h
@@ -426,6 +435,7 @@ set(COMMON_SRC_FILES
 	VirtualPad.cpp
 	VirtualPad.h
 	${AMAZON_S3_SRC}
+	${HLE_BGDA_SRC}
 )
 
 if(TARGET_PLATFORM_WIN32)
