@@ -4,9 +4,10 @@
 #include "make_unique.h"
 #include "stricmp.h"
 #include "DiskUtils.h"
-#include "IszImageStream.h"
-#include "CsoImageStream.h"
-#include "MdsDiscImage.h"
+#include "discimages/CsoImageStream.h"
+#include "discimages/CueSheet.h"
+#include "discimages/IszImageStream.h"
+#include "discimages/MdsDiscImage.h"
 #include "StdStream.h"
 #include "StringUtils.h"
 #ifdef HAS_AMAZON_S3
@@ -50,6 +51,48 @@ static Framework::CStream* CreateImageStream(const fs::path& imagePath)
 #endif
 }
 
+static DiskUtils::OpticalMediaPtr CreateOpticalMediaFromCueSheet(const fs::path& imagePath)
+{
+	auto currentPath = imagePath.parent_path();
+	auto imageStream = std::unique_ptr<Framework::CStream>(CreateImageStream(imagePath));
+	auto fileStream = std::shared_ptr<Framework::CStream>();
+	CCueSheet cueSheet(*imageStream);
+	for(const auto& command : cueSheet.GetCommands())
+	{
+		if(auto fileCommand = dynamic_cast<CCueSheet::COMMAND_FILE*>(command.get()))
+		{
+			assert(fileCommand->filetype == "BINARY");
+			auto filePath = currentPath / fileCommand->filename;
+			fileStream = std::shared_ptr<Framework::CStream>(CreateImageStream(filePath));
+			break;
+		}
+	}
+	if(!fileStream)
+	{
+		throw std::runtime_error("Could not build media from cuesheet.");
+	}
+	return COpticalMedia::CreateAuto(fileStream);
+}
+
+static DiskUtils::OpticalMediaPtr CreateOpticalMediaFromMds(const fs::path& imagePath)
+{
+	auto imageStream = std::unique_ptr<Framework::CStream>(CreateImageStream(imagePath));
+	auto discImage = CMdsDiscImage(*imageStream);
+
+	//Create image data path
+	auto imageDataPath = imagePath;
+	imageDataPath.replace_extension("mdf");
+	auto imageDataStream = std::shared_ptr<Framework::CStream>(CreateImageStream(imageDataPath));
+
+	return COpticalMedia::CreateDvd(imageDataStream, discImage.IsDualLayer(), discImage.GetLayerBreak());
+}
+
+const DiskUtils::ExtensionList& DiskUtils::GetSupportedExtensions()
+{
+	static auto extensionList = ExtensionList{".iso", ".mds", ".isz", ".cso", ".cue"};
+	return extensionList;
+}
+
 DiskUtils::OpticalMediaPtr DiskUtils::CreateOpticalMediaFromPath(const fs::path& imagePath, uint32 opticalMediaCreateFlags)
 {
 	assert(!imagePath.empty());
@@ -66,17 +109,13 @@ DiskUtils::OpticalMediaPtr DiskUtils::CreateOpticalMediaFromPath(const fs::path&
 	{
 		stream = std::make_shared<CCsoImageStream>(CreateImageStream(imagePath));
 	}
+	else if(!stricmp(extension.c_str(), ".cue"))
+	{
+		return CreateOpticalMediaFromCueSheet(imagePath);
+	}
 	else if(!stricmp(extension.c_str(), ".mds"))
 	{
-		auto imageStream = std::unique_ptr<Framework::CStream>(CreateImageStream(imagePath));
-		auto discImage = CMdsDiscImage(*imageStream);
-
-		//Create image data path
-		auto imageDataPath = imagePath;
-		imageDataPath.replace_extension("mdf");
-		auto imageDataStream = std::shared_ptr<Framework::CStream>(CreateImageStream(imageDataPath));
-
-		return COpticalMedia::CreateDvd(imageDataStream, discImage.IsDualLayer(), discImage.GetLayerBreak());
+		return CreateOpticalMediaFromMds(imagePath);
 	}
 #ifdef _WIN32
 	else if(imagePath.string()[0] == '\\')

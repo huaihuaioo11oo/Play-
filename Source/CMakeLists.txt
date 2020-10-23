@@ -133,8 +133,14 @@ set(COMMON_SRC_FILES
 	COP_SCU.cpp
 	COP_SCU.h
 	COP_SCU_Reflection.cpp
-	CsoImageStream.cpp
-	CsoImageStream.h
+	discimages/CsoImageStream.cpp
+	discimages/CsoImageStream.h
+	discimages/CueSheet.cpp
+	discimages/CueSheet.h
+	discimages/IszImageStream.cpp
+	discimages/IszImageStream.h
+	discimages/MdsDiscImage.cpp
+	discimages/MdsDiscImage.h
 	DiskUtils.cpp
 	DiskUtils.h
 	ee/COP_VU.cpp
@@ -345,8 +351,6 @@ set(COMMON_SRC_FILES
 	ISO9660/PathTableRecord.h
 	ISO9660/VolumeDescriptor.cpp
 	ISO9660/VolumeDescriptor.h
-	IszImageStream.cpp
-	IszImageStream.h
 	Log.cpp
 	Log.h
 	MA_MIPSIV.cpp
@@ -355,8 +359,6 @@ set(COMMON_SRC_FILES
 	MA_MIPSIV_Templates.cpp
 	MailBox.cpp
 	MailBox.h
-	MdsDiscImage.cpp
-	MdsDiscImage.h
 	MemoryMap.cpp
 	MemoryMap.h
 	MemoryUtils.cpp
