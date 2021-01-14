@@ -34,10 +34,12 @@ void CMemoryMap::InsertInstructionMap(uint32 start, uint32 end, void* pointer, u
 	InsertMap(m_instructionMap, start, end, pointer, key);
 }
 
+/*
 const CMemoryMap::MemoryMapListType& CMemoryMap::GetInstructionMaps()
 {
 	return m_instructionMap;
 }
+*/
 
 const CMemoryMap::MEMORYMAPELEMENT* CMemoryMap::GetReadMap(uint32 address) const
 {
@@ -49,6 +51,23 @@ const CMemoryMap::MEMORYMAPELEMENT* CMemoryMap::GetWriteMap(uint32 address) cons
 	return GetMap(m_writeMap, address);
 }
 
+static void InsertIntoMap(CMemoryMap::MemoryMapListType& memoryMap, uint32 start, uint32 end, const CMemoryMap::MEMORYMAPELEMENT& element)
+{
+	uint32 startPage = start >> 12;
+	size_t endPage = end >> 12;
+
+	if(memoryMap.size() <= endPage)
+	{
+		CMemoryMap::MEMORYMAPELEMENT unmapped;
+		unmapped.nType = CMemoryMap::MEMORYMAP_TYPE_UNMAPPED;
+		memoryMap.resize(endPage + 1, unmapped);
+	}
+	for(auto page = startPage; page <= endPage; ++page)
+	{
+		memoryMap[page] = element;
+	}
+}
+
 void CMemoryMap::InsertMap(MemoryMapListType& memoryMap, uint32 start, uint32 end, void* pointer, unsigned char key)
 {
 	MEMORYMAPELEMENT element;
@@ -56,7 +75,8 @@ void CMemoryMap::InsertMap(MemoryMapListType& memoryMap, uint32 start, uint32 en
 	element.nEnd = end;
 	element.pPointer = pointer;
 	element.nType = MEMORYMAP_TYPE_MEMORY;
-	memoryMap.push_back(element);
+	
+	InsertIntoMap(memoryMap, start, end, element);
 }
 
 void CMemoryMap::InsertMap(MemoryMapListType& memoryMap, uint32 start, uint32 end, const MemoryMapHandlerType& handler, unsigned char key)
@@ -67,20 +87,21 @@ void CMemoryMap::InsertMap(MemoryMapListType& memoryMap, uint32 start, uint32 en
 	element.handler = handler;
 	element.pPointer = nullptr;
 	element.nType = MEMORYMAP_TYPE_FUNCTION;
-	memoryMap.push_back(element);
+
+	InsertIntoMap(memoryMap, start, end, element);
 }
 
 const CMemoryMap::MEMORYMAPELEMENT* CMemoryMap::GetMap(const MemoryMapListType& memoryMap, uint32 nAddress)
 {
-	for(const auto& mapElement : memoryMap)
+	// Memory is always in 4K pages on the PS2
+	const uint32 pageNum = nAddress >> 12;
+	if(pageNum >= memoryMap.size())
 	{
-		if(nAddress <= mapElement.nEnd)
-		{
-			if(!(nAddress >= mapElement.nStart)) return nullptr;
-			return &mapElement;
-		}
+		return nullptr;
 	}
-	return nullptr;
+
+	const MEMORYMAPELEMENT& element = memoryMap[pageNum];
+	return element.nType == MEMORYMAP_TYPE_UNMAPPED ? nullptr :  & element;
 }
 
 uint8 CMemoryMap::GetByte(uint32 nAddress)

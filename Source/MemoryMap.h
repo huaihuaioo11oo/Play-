@@ -18,6 +18,7 @@ public:
 
 	enum MEMORYMAP_TYPE
 	{
+		MEMORYMAP_TYPE_UNMAPPED,
 		MEMORYMAP_TYPE_MEMORY,
 		MEMORYMAP_TYPE_FUNCTION
 	};
@@ -45,7 +46,6 @@ public:
 	void InsertWriteMap(uint32, uint32, void*, unsigned char);
 	void InsertWriteMap(uint32, uint32, const MemoryMapHandlerType&, unsigned char);
 	void InsertInstructionMap(uint32, uint32, void*, unsigned char);
-	const MemoryMapListType& GetInstructionMaps();
 	const MEMORYMAPELEMENT* GetReadMap(uint32) const;
 	const MEMORYMAPELEMENT* GetWriteMap(uint32) const;
 
